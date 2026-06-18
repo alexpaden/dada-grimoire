@@ -32,8 +32,8 @@ up: ## Build + start everything (binds 0.0.0.0 on the LAN)
 	if [ -n "$$LIVE_IP" ] && ! grep -q "^HOST_IP=$$LIVE_IP$$" .env; then \
 	  sed -i.bak "s/^HOST_IP=.*/HOST_IP=$$LIVE_IP/" .env && rm -f .env.bak; \
 	  echo "Synced HOST_IP -> $$LIVE_IP (LAN IP changed)"; \
-	fi
-	$(COMPOSE) up --build -d
+	fi; \
+	HOST_IP=$$(grep '^HOST_IP=' .env | cut -d= -f2) $(COMPOSE) up --build -d
 	@HOST_IP=$$(grep '^HOST_IP=' .env | cut -d= -f2); FP=$$(grep '^FRONTEND_PORT=' .env | cut -d= -f2); \
 	echo "Grimoire up. Announce  http://$${HOST_IP:-127.0.0.1}:$${FP:-3000}  on the TV."
 
