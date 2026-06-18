@@ -1,0 +1,6 @@
+{
+  "markdown.preview.linkify": true,
+  "markdown.preview.scrollEditorWithPreview": true,
+  "markdown.preview.scrollPreviewWithEditor": true,
+  "markdown.validate.enabled": true
+}

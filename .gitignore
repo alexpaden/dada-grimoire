@@ -1,0 +1,42 @@
+# --- CTF secrets: NEVER ship these to students ---
+.env
+# answer key + proofs live here (spoiler-heavy) - keep local
+ADMIN/
+INSTRUCTOR.md
+# stale design doc (spoiler-heavy) - keep local
+OUTLINE.md
+seed/flags.generated.json
+student-bundle/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.h1lab/
+db.sqlite3
+
+# Node / Next
+node_modules/
+.next/
+out/
+.pnpm-store/
+*.tsbuildinfo
+next-env.d.ts
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.log
+
+# Docker volumes / local data
+pgdata/
+.gstack/
+
+# Agent working dirs — ignore everything except the placeholder
+.claude/*
+!.claude/readme.workflows

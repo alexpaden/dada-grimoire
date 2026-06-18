@@ -1,0 +1,114 @@
+# =============================================================================
+#  GRIMOIRE CTF — service topology
+#
+#   frontend(:3000) ─┐
+#   backend (:8000) ─┴─ app-net ── postgres(:5432*)
+#                     \
+#                      worker-net (internal) ── render-worker(:8001)
+# =============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "0.0.0.0:${POSTGRES_PORT}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [app-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  render-worker:
+    build: ./layout-worker
+    restart: unless-stopped
+    environment:
+      LAYOUT_WORKER_STATUS: ${GRIMOIRE_SLOT_G}
+      JOB_MARKER: ${JOB_MARKER}
+      DATABASE_URL: "postgresql://grimoire_svc:Pr0d-db-8f3a2c9d@db.internal:5432/grimoire"
+      REDIS_URL: "redis://:Pr0d-cache-1b7e@cache.internal:6379/0"
+      DJANGO_SECRET_KEY: "django-insecure-k4z9zq2w8wvm1n6xr0fae7tcb3jp5hd"
+      AWS_ACCESS_KEY_ID: "AKIA4SI7GRMQ9XEXAMPLE"
+      AWS_SECRET_ACCESS_KEY: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+      INTERNAL_API_TOKEN: "gms_live_a1f93c7e2b8d4f60a5c1e9d7b6483f02"
+      SMTP_PASSWORD: "SG.mail-2f9a7c4e8b1d"
+      SENTRY_DSN: "https://3f9a2c7e1b8d4c5a@o419283.ingest.sentry.io/5571904"
+    networks: [worker-net]
+    user: "65534:65534"              # nobody
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      SECRET_KEY: ${SECRET_KEY}
+      GRIMOIRE_SALT: ${GRIMOIRE_SALT}
+      DJANGO_DEBUG: ${DJANGO_DEBUG}
+      KIOSK_SECRET: ${KIOSK_SECRET}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: postgres
+      WORKER_URL: http://render-worker:8001
+      HOST_IP: ${HOST_IP}
+      # Per-deployment policy profiles. Values are operator-provisioned per instance
+      # (kept in the gitignored .env), never in this repo. Unset -> safe defaults.
+      IDENTITY_PROFILE: ${IDENTITY_PROFILE:-}
+      TV_RENDER_PROFILE: ${TV_RENDER_PROFILE:-}
+      TOKEN_PROFILE: ${TOKEN_PROFILE:-}
+      GRIMOIRE_SLOT_A: ${GRIMOIRE_SLOT_A}
+      GRIMOIRE_SLOT_B: ${GRIMOIRE_SLOT_B}
+      GRIMOIRE_SLOT_C: ${GRIMOIRE_SLOT_C}
+      GRIMOIRE_SLOT_D: ${GRIMOIRE_SLOT_D}
+      GRIMOIRE_SLOT_E: ${GRIMOIRE_SLOT_E}
+      GRIMOIRE_SLOT_F: ${GRIMOIRE_SLOT_F}
+      GRIMOIRE_SLOT_G: ${GRIMOIRE_SLOT_G}
+    ports:
+      - "0.0.0.0:${BACKEND_PORT}:8000"
+    networks: [app-net, worker-net]
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on: [backend]
+    environment:
+      NEXT_PUBLIC_API_BASE: http://${HOST_IP}:${BACKEND_PORT}
+      # HOST_IP lets next.config.js add the LAN IP to allowedDevOrigins, so the
+      # dev server serves /_next assets (hydration) when reached via the LAN IP.
+      HOST_IP: ${HOST_IP}
+      COMPOSE_DRAFT_TOKEN: ${GRIMOIRE_SLOT_A}
+    ports:
+      - "0.0.0.0:${FRONTEND_PORT}:3000"
+    networks: [app-net]
+
+networks:
+  app-net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "false"
+  worker-net:
+    driver: bridge
+    internal: true
+
+volumes:
+  pgdata:

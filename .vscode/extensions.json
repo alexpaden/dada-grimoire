@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "vscode.markdown-language-features",
+    "vscode.markdown-math"
+  ],
+  "unwantedRecommendations": [
+    "shd101wyy.markdown-preview-enhanced"
+  ]
+}
